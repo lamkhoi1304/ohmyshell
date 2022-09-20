@@ -11,8 +11,14 @@ import (
 )
 
 const (
+	yellow = "\033[1;33m%s\033[0m"
+	blue   = "\033[1;34m%s\033[0m"
 	purple = "\033[1;35m%s\033[0m"
 	cyan   = "\033[1;36m%s\033[0m"
+)
+
+var (
+	hasGit = false
 )
 
 func main() {
@@ -41,6 +47,7 @@ func main() {
 		username := getUsername()
 		path := getPath()
 
+		checkGit()
 		printPrompt(hostname, username, path)
 
 		input, err := reader.ReadString('\n')
@@ -193,7 +200,14 @@ func printPrompt(hostname string, username string, path string) {
 	fmt.Printf(purple, username)
 	fmt.Printf(purple, "@")
 	fmt.Printf(purple, hostname)
-	fmt.Printf(":")
+	if hasGit == true {
+		branch := getGitBranch()
+
+		fmt.Printf(yellow, "|")
+		fmt.Printf(yellow, "Git: ")
+		fmt.Printf(yellow, branch)
+		fmt.Printf(yellow, "|")
+	}
 	fmt.Printf(cyan, path)
 	fmt.Printf("$ ")
 }
@@ -211,4 +225,28 @@ func removeSpacebar(args []string) []string {
 	}
 
 	return args
+}
+
+func getGitBranch() string {
+	cmd := exec.Command("cat", ".git/HEAD")
+
+	stdout, err := cmd.Output()
+
+	output := strings.TrimSuffix(string(stdout), "\n")
+	refs := strings.Split(output, " ")
+	branch := strings.Split(refs[1], "/")
+
+	if err != nil {
+		return ""
+	}
+
+	return string(branch[len(branch)-1])
+}
+
+func checkGit() {
+	if _, err := os.Stat(".git"); !os.IsNotExist(err) {
+		hasGit = true
+	} else {
+		hasGit = false
+	}
 }
