@@ -49,6 +49,10 @@ func main() {
 			continue
 		}
 
+		if len(removeSpacebar(strings.Split(strings.TrimSuffix(input, "\n"), " "))) == 0 {
+			continue
+		}
+
 		if _, e := history.Write([]byte(input)); e != nil {
 			fmt.Fprintln(os.Stderr, e)
 		}
@@ -66,6 +70,11 @@ func main() {
 func execInput(input string) error {
 	input = strings.TrimSuffix(input, "\n")
 	args := strings.Split(input, " ")
+	args = removeSpacebar(args)
+
+	if len(args) == 0 {
+		return nil
+	}
 
 	switch args[0] {
 	case "cd":
@@ -95,15 +104,7 @@ func cdShell(args []string) error {
 		return errors.New("ohmyshell: " + args[0] + ": " + "too many arguments")
 	}
 
-	if len(args) < 2 {
-		currentUser, err := user.Current()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		return os.Chdir(currentUser.HomeDir)
-	}
-
-	if args[1] == "~" {
+	if len(args) < 2 || args[1] == "" || args[1] == "~" {
 		currentUser, err := user.Current()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -195,4 +196,19 @@ func printPrompt(hostname string, username string, path string) {
 	fmt.Printf(":")
 	fmt.Printf(cyan, path)
 	fmt.Printf("$ ")
+}
+
+func removeElemFromSlice(slice []string, i int) []string {
+	return append(slice[:i], slice[i+1:]...)
+}
+
+func removeSpacebar(args []string) []string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "" {
+			args = removeElemFromSlice(args, i)
+			i--
+		}
+	}
+
+	return args
 }
