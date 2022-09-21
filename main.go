@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	red    = "\033[1;31m%s\033[0m"
 	yellow = "\033[1;33m%s\033[0m"
 	blue   = "\033[1;34m%s\033[0m"
 	purple = "\033[1;35m%s\033[0m"
@@ -18,7 +19,8 @@ const (
 )
 
 var (
-	hasGit = false
+	hasGit   = false
+	gitColor = ""
 )
 
 func main() {
@@ -203,10 +205,10 @@ func printPrompt(hostname string, username string, path string) {
 	if hasGit == true {
 		branch := getGitBranch()
 
-		fmt.Printf(yellow, "|")
-		fmt.Printf(yellow, "Git: ")
-		fmt.Printf(yellow, branch)
-		fmt.Printf(yellow, "|")
+		fmt.Printf(gitColor, "|")
+		fmt.Printf(gitColor, "Git: ")
+		fmt.Printf(gitColor, branch)
+		fmt.Printf(gitColor, "|")
 	}
 	fmt.Printf(cyan, path)
 	fmt.Printf("$ ")
@@ -231,14 +233,13 @@ func getGitBranch() string {
 	cmd := exec.Command("cat", ".git/HEAD")
 
 	stdout, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
 
 	output := strings.TrimSuffix(string(stdout), "\n")
 	refs := strings.Split(output, " ")
 	branch := strings.Split(refs[1], "/")
-
-	if err != nil {
-		return ""
-	}
 
 	return string(branch[len(branch)-1])
 }
@@ -246,6 +247,18 @@ func getGitBranch() string {
 func checkGit() {
 	if _, err := os.Stat(".git"); !os.IsNotExist(err) {
 		hasGit = true
+
+		cmd := exec.Command("bash", "-c", "git status | grep modified")
+		stdout, err := cmd.Output()
+		if err != nil {
+			return
+		}
+
+		if len(string(stdout)) != 0 {
+			gitColor = red
+		} else {
+			gitColor = yellow
+		}
 	} else {
 		hasGit = false
 	}
