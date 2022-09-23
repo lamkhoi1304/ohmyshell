@@ -96,6 +96,8 @@ func execInput(input string) error {
 		return cdShell(args)
 	case "history":
 		return historyShell(args)
+	case "vi", "vim":
+		return textEditor(args)
 	case "exit":
 		exitShell()
 	default:
@@ -209,12 +211,15 @@ func printPrompt(hostname string, username string, path string) {
 	fmt.Printf(purple, "@")
 	fmt.Printf(purple, hostname)
 	if hasGit == true {
+
 		branch := getGitBranch()
 
+		fmt.Printf(" ")
 		fmt.Printf(gitColor, "|")
 		fmt.Printf(gitColor, "Git: ")
 		fmt.Printf(gitColor, branch)
 		fmt.Printf(gitColor, "|")
+		fmt.Printf(" ")
 	}
 	fmt.Printf(cyan, path)
 	fmt.Printf("$ ")
@@ -273,6 +278,29 @@ func checkGit() {
 func redirect(input string) error {
 	cmd := exec.Command("bash", "-c", input)
 
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+func textEditor(args []string) error {
+	if len(args) > 2 {
+		return errors.New("ohmyshell: " + args[0] + ": " + "too many arguments")
+	}
+
+	if len(args) < 2 {
+		cmd := exec.Command(args[0], "--help")
+
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+
+		return cmd.Run()
+	}
+
+	cmd := exec.Command(args[0], args[1])
+
+	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
