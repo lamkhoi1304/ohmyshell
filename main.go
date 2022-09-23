@@ -85,6 +85,12 @@ func execInput(input string) error {
 		return nil
 	}
 
+	for _, v := range args {
+		if v == "<" || v == "<<" || v == ">" || v == ">>" || v == "|" {
+			return redirect(input)
+		}
+	}
+
 	switch args[0] {
 	case "cd":
 		return cdShell(args)
@@ -262,4 +268,13 @@ func checkGit() {
 	} else {
 		hasGit = false
 	}
+}
+
+func redirect(input string) error {
+	cmd := exec.Command("bash", "-c", input)
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
 }
