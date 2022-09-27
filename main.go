@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"os/user"
 	"strings"
+
+	"github.com/c-bata/go-prompt"
 )
 
 const (
@@ -21,7 +23,14 @@ const (
 var (
 	hasGit   = false
 	gitColor = ""
+	h        = []string{}
 )
+
+func completer(d prompt.Document) []prompt.Suggest {
+	s := []prompt.Suggest{}
+
+	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+}
 
 func main() {
 	if err := checkFolder(); err != nil {
@@ -34,6 +43,18 @@ func main() {
 		return
 	}
 
+	readHis, err := os.Open("/tmp/ohmyshell/history")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+	scanner := bufio.NewScanner(readHis)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		h = append(h, scanner.Text())
+	}
+	readHis.Close()
+
 	history, err := os.OpenFile("/tmp/ohmyshell/history", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -41,8 +62,6 @@ func main() {
 	}
 
 	defer history.Close()
-
-	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		hostname := getHostname()
@@ -52,7 +71,7 @@ func main() {
 		checkGit()
 		printPrompt(hostname, username, path)
 
-		input, err := reader.ReadString('\n')
+		input := prompt.Input("", completer, prompt.OptionHistory(h))
 
 		if input == "\n" {
 			continue
@@ -61,6 +80,9 @@ func main() {
 		if len(removeSpacebar(strings.Split(strings.TrimSuffix(input, "\n"), " "))) == 0 {
 			continue
 		}
+
+		h = append(h, input)
+		input += "\n"
 
 		if _, e := history.Write([]byte(input)); e != nil {
 			fmt.Fprintln(os.Stderr, e)
@@ -99,6 +121,7 @@ func execInput(input string) error {
 	case "vi", "vim":
 		return textEditor(args)
 	case "exit":
+		exec.Command("stty", "-F", "/dev/tty", "echo").Run()
 		exitShell()
 	default:
 		cmd := exec.Command(args[0], args[1:]...)
@@ -147,6 +170,7 @@ func historyShell(args []string) error {
 	}
 
 	if args[1] == "-c" {
+		h = h[:0]
 		cmd := exec.Command("truncate", "-s", "0", "/tmp/ohmyshell/history")
 
 		cmd.Stderr = os.Stderr
@@ -260,10 +284,7 @@ func checkGit() {
 		hasGit = true
 
 		cmd := exec.Command("bash", "-c", "git status | grep modified")
-		stdout, err := cmd.Output()
-		if err != nil {
-			return
-		}
+		stdout, _ := cmd.Output()
 
 		if len(string(stdout)) != 0 {
 			gitColor = red
