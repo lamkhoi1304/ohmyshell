@@ -120,6 +120,9 @@ func execInput(input string) error {
 		return historyShell(args)
 	case "vi", "vim":
 		return textEditor(args)
+	case "top":
+		exec.Command("stty", "-F", "/dev/tty", "echo").Run()
+		return topCommand(args)
 	case "exit":
 		exec.Command("stty", "-F", "/dev/tty", "echo").Run()
 		exitShell()
@@ -320,6 +323,20 @@ func textEditor(args []string) error {
 	}
 
 	cmd := exec.Command(args[0], args[1])
+
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+
+	return cmd.Run()
+}
+
+func topCommand(args []string) error {
+	if len(args) > 1 {
+		return errors.New("ohmyshell: " + args[0] + ": " + "too many arguments")
+	}
+
+	cmd := exec.Command("bash", "-c", args[0])
 
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
