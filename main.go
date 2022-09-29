@@ -191,7 +191,7 @@ func checkFolder() error {
 }
 
 func checkFile() error {
-	if _, err := os.Stat("/tmp/ohmyshell"); !os.IsNotExist(err) {
+	if _, err := os.Stat("/tmp/ohmyshell/history"); !os.IsNotExist(err) {
 		return err
 	}
 
